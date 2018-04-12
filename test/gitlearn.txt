@@ -1,0 +1,248 @@
+git init
+git add <file>
+git commit -m "description"
+git status
+git diff (HEAD) <file>
+git log --pretty=oneline
+git reset --hard HEAD^ <HEAD~n>
+git reset --hard commit_id
+git log 	查看提交历史
+git reflog 	查看命令历史
+工作区(Working Directory)
+版本库(Repository)
+暂存区(Stage|index)	HEAD master
+git checkout -- <file>	文件恢复到上一个提交
+git reset HEAD <file>	文件恢复到最近提交
+git rm <file>	删除文件
+git checkout -- <file>	恢复文件
+ssh-keygen -t rsa -C "youremail@example.com"	创建ssh key
+
+关联github上的库
+git remote add origin git@server-name:path/repo-name.git
+git remote add origin git@github:huangdaoan/repo-name.git
+
+推送远程库
+git push -u origin master	第一次推送master分支的所有内容；
+git push origin master		推送最新修改
+
+从远程服务器上克隆版本库到本地
+git clone git@github.com:huangdaoan/repo-name.git
+
+get branch		查看分支
+git branch <name>		创建分支
+git checkout <name>		切换分支
+git checkout -b <name>		创建+切换分支
+git checkout -b dev
+
+git merge <name>		合并某个分支(name)到当前分支
+Fast-forward模式，无冲突模式
+git branch -d <name>	删除分支
+
+git status 可以查看冲突文件，版本合并时
+git log --graph --pretty=oneline --abbrev-commit
+git log --graph命令可以看到分支合并图
+
+git merge --no-ff -m "merge with no-ff" dev
+
+分支管理策略
+阅读: 473794
+通常，合并分支时，如果可能，Git会用Fast forward模式，但这种模式下，删除分支后，会丢掉分支信息。
+
+如果要强制禁用Fast forward模式，Git就会在merge时生成一个新的commit，这样，从分支历史上就可以看出分支信息。
+
+下面我们实战一下--no-ff方式的git merge：
+
+首先，仍然创建并切换dev分支：
+
+$ git checkout -b dev
+Switched to a new branch 'dev'
+修改readme.txt文件，并提交一个新的commit：
+
+$ git add readme.txt 
+$ git commit -m "add merge"
+[dev 6224937] add merge
+ 1 file changed, 1 insertion(+)
+现在，我们切换回master：
+
+$ git checkout master
+Switched to branch 'master'
+准备合并dev分支，请注意--no-ff参数，表示禁用Fast forward：
+
+$ git merge --no-ff -m "merge with no-ff" dev
+Merge made by the 'recursive' strategy.
+ readme.txt |    1 +
+ 1 file changed, 1 insertion(+)
+因为本次合并要创建一个新的commit，所以加上-m参数，把commit描述写进去。
+
+合并后，我们用git log看看分支历史：
+
+$ git log --graph --pretty=oneline --abbrev-commit
+*   7825a50 merge with no-ff
+|\
+| * 6224937 add merge
+|/
+*   59bc1cb conflict fixed
+...
+可以看到，不使用Fast forward模式，merge后就像这样：
+
+git-no-ff-mode
+
+分支策略
+在实际开发中，我们应该按照几个基本原则进行分支管理：
+
+首先，master分支应该是非常稳定的，也就是仅用来发布新版本，平时不能在上面干活；
+
+那在哪干活呢？干活都在dev分支上，也就是说，dev分支是不稳定的，到某个时候，比如1.0版本发布时，再把dev分支合并到master上，在master分支发布1.0版本；
+
+你和你的小伙伴们每个人都在dev分支上干活，每个人都有自己的分支，时不时地往dev分支上合并就可以了。
+
+合并分支时，加上--no-ff参数就可以用普通模式合并，合并后的历史有分支，能看出来曾经做过合并，而fast forward合并就看不出来曾经做过合并。
+
+
+Bug分支
+
+Git还提供了一个stash功能，可以把当前工作现场“储藏”起来，等以后恢复现场后继续工作
+
+用git status查看工作区，就是干净的（除非有没有被Git管理的文件），因此可以放心地创建分支来修复bug
+
+
+首先确定要在哪个分支上修复bug，假定需要在master分支上修复，就从master创建临时分支
+
+工作区是干净的，刚才的工作现场存到哪去了？用git stash list命令看看：
+
+工作现场还在，Git把stash内容存在某个地方了，但是需要恢复一下，有两个办法：
+
+一是用git stash apply恢复，但是恢复后，stash内容并不删除，你需要用git stash drop来删除；
+
+另一种方式是用git stash pop，恢复的同时把stash内容也删了：
+
+你可以多次stash，恢复的时候，先用git stash list查看，然后恢复指定的stash，用命令：
+
+$ git stash apply stash@{0}
+
+Bug分支
+阅读: 349098
+软件开发中，bug就像家常便饭一样。有了bug就需要修复，在Git中，由于分支是如此的强大，所以，每个bug都可以通过一个新的临时分支来修复，修复后，合并分支，然后将临时分支删除。
+
+当你接到一个修复一个代号101的bug的任务时，很自然地，你想创建一个分支issue-101来修复它，但是，等等，当前正在dev上进行的工作还没有提交：
+
+$ git status
+# On branch dev
+# Changes to be committed:
+#   (use "git reset HEAD <file>..." to unstage)
+#
+#       new file:   hello.py
+#
+# Changes not staged for commit:
+#   (use "git add <file>..." to update what will be committed)
+#   (use "git checkout -- <file>..." to discard changes in working directory)
+#
+#       modified:   readme.txt
+#
+并不是你不想提交，而是工作只进行到一半，还没法提交，预计完成还需1天时间。但是，必须在两个小时内修复该bug，怎么办？
+
+幸好，Git还提供了一个stash功能，可以把当前工作现场“储藏”起来，等以后恢复现场后继续工作：
+
+$ git stash
+Saved working directory and index state WIP on dev: 6224937 add merge
+HEAD is now at 6224937 add merge
+现在，用git status查看工作区，就是干净的（除非有没有被Git管理的文件），因此可以放心地创建分支来修复bug。
+
+首先确定要在哪个分支上修复bug，假定需要在master分支上修复，就从master创建临时分支：
+
+$ git checkout master
+Switched to branch 'master'
+Your branch is ahead of 'origin/master' by 6 commits.
+$ git checkout -b issue-101
+Switched to a new branch 'issue-101'
+现在修复bug，需要把“Git is free software ...”改为“Git is a free software ...”，然后提交：
+
+$ git add readme.txt 
+$ git commit -m "fix bug 101"
+[issue-101 cc17032] fix bug 101
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+修复完成后，切换到master分支，并完成合并，最后删除issue-101分支：
+
+$ git checkout master
+Switched to branch 'master'
+Your branch is ahead of 'origin/master' by 2 commits.
+$ git merge --no-ff -m "merged bug fix 101" issue-101
+Merge made by the 'recursive' strategy.
+ readme.txt |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+$ git branch -d issue-101
+Deleted branch issue-101 (was cc17032).
+太棒了，原计划两个小时的bug修复只花了5分钟！现在，是时候接着回到dev分支干活了！
+
+$ git checkout dev
+Switched to branch 'dev'
+$ git status
+# On branch dev
+nothing to commit (working directory clean)
+工作区是干净的，刚才的工作现场存到哪去了？用git stash list命令看看：
+
+$ git stash list
+stash@{0}: WIP on dev: 6224937 add merge
+工作现场还在，Git把stash内容存在某个地方了，但是需要恢复一下，有两个办法：
+
+一是用git stash apply恢复，但是恢复后，stash内容并不删除，你需要用git stash drop来删除；
+
+另一种方式是用git stash pop，恢复的同时把stash内容也删了：
+
+$ git stash pop
+# On branch dev
+# Changes to be committed:
+#   (use "git reset HEAD <file>..." to unstage)
+#
+#       new file:   hello.py
+#
+# Changes not staged for commit:
+#   (use "git add <file>..." to update what will be committed)
+#   (use "git checkout -- <file>..." to discard changes in working directory)
+#
+#       modified:   readme.txt
+#
+Dropped refs/stash@{0} (f624f8e5f082f2df2bed8a4e09c12fd2943bdd40)
+再用git stash list查看，就看不到任何stash内容了：
+
+$ git stash list
+你可以多次stash，恢复的时候，先用git stash list查看，然后恢复指定的stash，用命令：
+
+$ git stash apply stash@{0}
+小结
+修复bug时，我们会通过创建新的bug分支进行修复，然后合并，最后删除；
+
+当手头工作没有完成时，先把工作现场git stash一下，然后去修复bug，修复后，再git stash pop，回到工作现场。
+
+开发一个新feature，最好新建一个分支；
+
+如果要丢弃一个没有被合并过的分支，可以通过git branch -D <name>强行删除。
+
+多人协作
+
+要查看远程库的信息，用git remote：
+用git remote -v显示更详细的信息：
+
+推送分支
+推送分支，就是把该分支上的所有本地提交推送到远程库。推送时，要指定本地分支，这样，Git就会把该分支推送到远程库对应的远程分支上：
+
+$ git push origin master
+如果要推送其他分支，比如dev，就改成：
+
+$ git push origin dev
+但是，并不是一定要把本地分支往远程推送，那么，哪些分支需要推送，哪些不需要呢？
+
+master分支是主分支，因此要时刻与远程同步；
+
+dev分支是开发分支，团队所有成员都需要在上面工作，所以也需要与远程同步；
+
+bug分支只用于在本地修复bug，就没必要推到远程了，除非老板要看看你每周到底修复了几个bug；
+
+feature分支是否推到远程，取决于你是否和你的小伙伴合作在上面开发。
+
+总之，就是在Git中，分支完全可以在本地自己藏着玩，是否推送，视你的心情而定！
+
+
+
+
+
